@@ -1,0 +1,151 @@
+# Flow Duration Curve Analysis - Config File
+# Written By: Ankush Kaundal
+
+# HOW TO USE:
+#   1. Set model_name, run1_name, run2_name at top.
+#   2. Set input/output paths
+#   3. Set corresponding Stress Period or Date Range.
+#   4. Toggle sections with true/false
+#   5. Run: python calculate_fdc.py
+
+
+
+# Because FDC tool computes run1-run2 in all differences, and we want Baseline minus Scenario for  projects
+# So, we set  run1 as Baseline and run2 as Scenario run number.
+
+
+# MODEL IDENTITY
+model_name : "cauvery"
+run1_name  : "cauvery401"   #Baseline
+run2_name  : "cauvery405"   #Scenario
+model_root : "F:\\cauvery_Update\\2026_cauvery_project\\GW"
+
+
+# Metadata
+metadata:
+  property_description: "fdc comparison"
+  units:
+    flowout: "ML/Day"
+    leakage: "ML/Day"
+
+
+# INPUT FILES
+inputs:
+  run1_flowout_csv   :  "{model_root}\\output\\{run1_name}\\flows\\{model_name}_flowout_timeseries.csv"
+  run2_flowout_csv   :  "{model_root}\\output\\{run2_name}\\flows\\{model_name}_flowout_timeseries.csv"
+  run1_leakage_csv   :  "{model_root}\\output\\{run1_name}\\flows\\{model_name}_leakage_timeseries.csv"
+  run2_leakage_csv   :  "{model_root}\\output\\{run2_name}\\flows\\{model_name}_leakage_timeseries.csv"
+  flowout_coords_csv :  "{model_root}\\output\\{model_name}_flowout_active_cells_coordinates.csv"
+  leakage_coords_csv :  "{model_root}\\output\\{model_name}_leakage_active_cells_coordinates.csv"
+
+  # Cell selection — pick ONE mode:
+  #   all_cells: true       — use every cell in the timeseries files (default)
+  #   specified_cells: true — use only cells listed in specified_cells_csv
+  cell_selection:
+    all_cells       : true
+    specified_cells : true
+    specified_cells_csv : "{model_root}\\output\\{run2_name}\\flows\\selected_cells_cauvery.csv" # csv with column: cell_id
+
+
+# OUTPUT
+outputs:
+  output_dir : "{model_root}\\output\\{run2_name}\\flows\\fdc_output"
+
+
+# TIMESERIES FILTER
+# filter_mode: date_range | sp_range | sp_ts
+# Date format: DD/MM/YYYY
+
+filter:
+  filter_mode     : "sp_range"
+  date_start      : "11/01/1970"
+  date_end        : "01/04/2020"
+
+  sp_start        : 181
+  sp_end          : 1980
+
+  #sp_ts_start_sp  : 500
+  #sp_ts_start_ts  : 1
+  #sp_ts_end_sp    : 1200
+  #sp_ts_end_ts    : 5
+
+
+# STRESS PERIODS
+# Last timestep of each SP is used
+stress_periods : [1179, 1308, 1667, 1980]
+
+
+# FDC SETTINGS
+# percentile_type:
+#   type6 — PERCENTILE.EXC (Excel) = numpy weibull
+#   type7 — PERCENTILE.INC (Excel) = numpy linear
+fdc:
+  run_analysis    : true
+  percentile_type : "type6"
+  percentiles     : [1, 5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 95, 99]
+  scale           : 1000.0    # divide by this for converting m3/day to Million Litres per Day (MLD).
+
+
+# FDC PLOT SETTINGS
+# subplot1: one cell ID, both runs compared
+# subplot2: one run, two different cell IDs compared (flowout or leakage)
+plot:
+  plot_flowout        : true
+  plot_leakage        : true
+  label_style         : "both"   # cell_id | layer_row_col | both
+  percentile_plot_min : 1
+  percentile_plot_max : 99
+
+  # Subplot 1 — same cell, Run1 vs Run2
+  subplot1:
+    enabled      : true
+    mode         : "all"        # single | all
+    flow_type    : "flowout"          # flowout | leakage
+    cell_id      : "L1R216C266"
+    plot_filename: "{model_name}_{run1_name}_vs_{run2_name}_fdc_subplot1.png"
+
+  # Subplot 2 — same run, two different cell IDs
+  subplot2:
+    enabled      : true
+    flow_type    : "flowout"          # flowout | leakage
+    run          : "{run1_name}"      # which run to use for both cells
+    cell_id_1    : "L1R216C266"
+    cell_id_2    : "L1R226C105"
+    plot_filename: "{model_name}_{run1_name}_vs_{run2_name}_fdc_subplot2.png"
+
+
+# SHAPEFILE SETTINGS
+shapefile:
+  save_flowout_shapefile : true
+  save_leakage_shapefile : true
+
+  # save_all_columns:
+  #   true  — save ENTIRE comparison sheet as shapefile attributes (all columns) (RECOMMENDED - OPTION)
+  #   false — save only the handpicked columns listed below
+  save_all_columns : true
+
+### Below column names have to be provided manually and stress periods should be from the stress_periods list.
+  flowout_columns :
+    - "{run1_name}_sp944"
+    - "{run2_name}_sp944"
+    - "diff_sp999"
+    - "q50_diff"
+    - "perc_q50diff"
+
+  leakage_columns :
+    - "{run1_name}_sp1392"
+    - "{run2_name}_sp1392"
+    - "q1_diff"
+    - "perc_q1diff"
+
+# MAP PLOT SETTINGS
+# basemap: esri_satellite | osm | none
+map_plot:
+  plot_flowout_map  : true
+  flowout_map_col   : "run2_sp860"
+
+  plot_leakage_map  : true
+  leakage_map_col   : "run2_sp860"
+
+  basemap           : "esri_satellite"
+  colormap          : "viridis"

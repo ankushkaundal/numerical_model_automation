@@ -1,0 +1,104 @@
+
+# MODFLOW ANALYSIS — MASTER CONFIGURATION FILE
+# Written By: Ankush Kaundal
+#
+# HOW TO USE:
+#   1. Set model_name, run_number, model_root at the top
+#   2. Update shared grid details
+#   3. Update shared paths
+#   4. Toggle run: true/false per script below
+#   5. Run everything:  python run_all.py
+#
+# PLACEHOLDERS :
+#   {model_root}  — base folder for the model
+#   {run_number}  — model run identifier e.g. b103
+#   {model_name}  — model name tag e.g. cauvery
+#
+# TO SWITCH RUNS — change run_number only. All paths update automatically.
+
+
+# MODEL IDENTITY
+model_name : "cauvery"
+run_number : "cauvery405"
+model_root : "F:\\cauvery_Update\\2026_cauvery_project\\GW"
+
+
+# SHARED GRID PARAMETERS
+# Used by: cell_coordinates, cs1_analysis
+
+grid:
+  nlay      : 3
+  nrow      : 335
+  ncol      : 406
+  cell_size : 200          # metres
+
+  # cauvery uses UPPER-LEFT origin 
+  # Options: bottom_left | top_left | bottom_right | top_right
+  origin_corner   : "bottom_left"
+  origin_easting  : 49900 #provide utm coordinates
+  origin_northing : 15000 #provide utm coordinates
+
+
+
+# SHARED TIMING
+# Used by: bas_timing (if applicable), cs1_analysis
+timing:
+  model_start_date: "1970-01-01"   # <- update to actual cauvery start date
+
+
+# SHARED PATHS
+# Used by all scripts
+paths:
+  dis_file   : "{model_root}\\input\\cauvery123\\cauvery123_MF6.tdis.prn"
+  cs1_file   : "{model_root}\\work\\{run_number}\\SFR_budget.cs2"
+  output_dir : "{model_root}\\output\\{run_number}\\flows"
+
+
+# SCRIPT 1 — CELL COORDINATE GENERATOR
+# generate_cell_coordinates.py
+# Produces: <model_name>_all_cells_coordinates.csv
+
+cell_coordinates:
+  run: false                # true = run | false = skip
+
+
+# SCRIPT 2 — DIS FILE TIMING PARSER
+# dis_to_datetime_stress_periods.py
+# Produces: <model_name>_dis_timing.xlsx 
+
+dis_timing:
+  run: false                # true = run | false = skip
+
+
+
+# SCRIPT 3 — CS1 CELL BUDGET FILE ANALYSIS
+# cs1_final.py
+
+cs1_analysis:
+  run: false                # true = run | false = skip entire script
+
+  parts:
+    inspect_records   : false   # Part 1 — print record types and structure
+    stress_period_csv : false   # Part 2 — stress period / timestep CSV with dates
+    active_cells      : false   # Part 3 — active cells CSV with BNG coordinates
+    timeseries        : true   # Part 4 — timeseries CSV with dates
+    spatial_plot      : false   # Part 5 — spatial PNG plot
+
+
+# SCRIPT 4 — CS2 ANALYSIS (MODFLOW 6 — SFR UTILITY CSV OUTPUTS)
+# cs2_final.py
+# Standalone MF6 equivalent of cs1_analysis — no .cs1/cbc file involved.
+# Reads the two CSVs already produced by the MF6 SFR utility.
+cs2_analysis:
+  run: true               # true = run | false = skip entire script
+
+  inputs:
+    leakage_csv : "{model_root}\\work\\{run_number}\\sfr_allcells_gw_sw.csv"
+    flowout_csv : "{model_root}\\work\\{run_number}\\sfr_allcells_totalflow.csv"
+
+  #  leakage_csv : "{model_root}\\output\\ankush_cauvery_postproc\\sfr_allcells_gw_sw.csv"
+   # flowout_csv : "{model_root}\\output\\ankush_cauvery_postproc\\sfr_allcells_totalflow.csv"
+    
+  parts:
+    active_cells : false   # active cells CSV with BNG coordinates (from column headers)
+    timeseries   : true   # timeseries CSV merged with TDIS stress period dates
